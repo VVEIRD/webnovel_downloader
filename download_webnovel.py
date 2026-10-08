@@ -19,6 +19,8 @@ import random
 
 # --- Functions
 
+new_chapters = 0
+
 cache_dir = os.path.join(str(Path.home()), ".webnove_downloader", "cache")
 book_dir = os.path.join(str(Path.home()), ".webnove_downloader", "books")
 
@@ -487,11 +489,25 @@ for i in tqdm(range(len(chapter_links_dedup)), desc='# - Downloading Chapters', 
     chapter = get_cached_chapter(novel_metadata['title'], link)
     if chapter is not None:
         chapter_title, chapter_content = [chapter['title'], chapter['content']]
+        selector = Selector(text=chapter_content)
+        spans_to_remove = selector.root.xpath('//span[not(@style)]')
+        for span in spans_to_remove:
+            span.getparent().remove(span)
+        chapter_content = Selector(root=selector.root).get()
     else:
+        new_chapters += 1
         chapter_title, chapter_content = get_chapter(source_url, link)
+        selector = Selector(text=chapter_content)
+        spans_to_remove = selector.root.xpath('//span[not(@style)]')
+        for span in spans_to_remove:
+            span.getparent().remove(span)
+        chapter_content = Selector(root=selector.root).get()
         write_cached_chapter(novel_metadata['title'], link, {'title': chapter_title, 'content': chapter_content})
         sleep(randint(10,30)/10.0)
+
     chapters.append({'title': chapter_title, 'content': chapter_content})
+
+print('# - New chapters downloaded: ' + str(new_chapters))
 
 # --- Split chapters fur segmentation
 parts = []
